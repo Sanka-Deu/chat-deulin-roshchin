@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, g
+from flask import Flask, render_template, request, g, jsonify
 import mysql.connector
 
 app = Flask(__name__)
@@ -24,7 +24,7 @@ def index():
 def user_registration():
     #cursor = g.conn.cursor()
     data = request.json
-    return "1"
+    return jsonify(data)
 
 @app.route("/chat")
 def chat():
