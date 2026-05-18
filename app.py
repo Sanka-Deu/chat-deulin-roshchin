@@ -20,6 +20,10 @@ def close_connect(er):
 def index():
     return render_template("registration.html")
 
+@app.route("/login")
+def registration():
+    return render_template("avtorization.html")
+
 @app.route("/user_registration", methods=["POST"])
 def user_registration():
     data = request.json
