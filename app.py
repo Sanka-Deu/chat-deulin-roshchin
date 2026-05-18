@@ -3,10 +3,10 @@ import mysql.connector
 
 app = Flask(__name__)
 
-'''@app.before_request
+@app.before_request
 def connect():
     conn = mysql.connector.connect(
-        host="",
+        host="185.114.247.43",
         database="sch688_magistratura",
         user="sch688_magistratura",
         password="Qwerty123")
@@ -14,7 +14,7 @@ def connect():
 
 @app.teardown_request
 def close_connect(er):
-    g.conn.close()'''
+    g.conn.close()
 
 @app.route("/")
 def index():
@@ -22,9 +22,14 @@ def index():
 
 @app.route("/user_registration", methods=["POST"])
 def user_registration():
-    #cursor = g.conn.cursor()
     data = request.json
-    return jsonify(data)
+    cursor = g.conn.cursor()
+    cursor.execute("INSERT INTO users (name, surname, login, password) VALUES (%s,%s,%s,%s)",
+                   (data["name"],data["surname"],data["login"],data["password"]))
+    g.conn.commit()
+    new_user_id = cursor.lastrowid
+    cursor.close
+    return jsonify({"user_id": new_user_id, "code": 200})
 
 @app.route("/chat")
 def chat():
