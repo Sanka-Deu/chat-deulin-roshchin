@@ -62,9 +62,6 @@ def user_registration():
     data = request.json
     cursor = g.conn.cursor()
     cursor.execute("SELECT id FROM users WHERE login = %s", (data["login"],))
-    if cursor.fetchone():
-        return jsonify({"error": "Логин уже занят", "code": 400}), 400
-    hashed_pw = hash_to_32chars(data["password"])
     cursor.execute("INSERT INTO users (name, surname, login, password) VALUES (%s,%s,%s,%s)",
                    (data["name"], data["surname"], data["login"], hashed_pw))
     g.conn.commit()
