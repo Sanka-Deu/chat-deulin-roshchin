@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Чат | Минималистичный интерфейс</title>
+    <style>
+        /* === Базовые стили из предоставленного style.css (адаптировано для чата) === */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #eef2f5;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 1.5rem;
+        }
+
+        /* Карточка чата — наследует стили .register-card, но с адаптацией под чат */
+        .register-card {
+            background: #ffffff;
+            max-width: 680px;          /* чуть шире для комфортного чтения чата */
+            width: 100%;
+            border-radius: 28px;
+            padding: 1.8rem 1.75rem;
+            box-shadow: 0 12px 28px -8px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(0, 0, 0, 0.02);
+            transition: box-shadow 0.2s ease;
+        }
+
+        h1 {
+            font-size: 1.75rem;
+            font-weight: 600;
+            letter-spacing: -0.01em;
+            color: #111827;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+
+        /* === Дополнительные стили для элементов чата === */
+        /* Область сообщений — светлая, воздушная, с прокруткой */
+        .chat-messages {
+            background-color: #fafcff;
+            border: 1px solid #e9eef3;
+            border-radius: 24px;
+            padding: 1rem 0.8rem;
+            max-height: 420px;
+            min-height: 320px;
+            overflow-y: auto;
+            margin-bottom: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.65rem;
+            scroll-behavior: smooth;
+        }
+
+        /* Кастомный скролл (минималистичный, без отвлечения) */
+        .chat-messages::-webkit-scrollbar {
+            width: 5px;
+        }
+        .chat-messages::-webkit-scrollbar-track {
+            background: #eef2f5;
+            border-radius: 10px;
+        }
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+
+        /* Базовый стиль сообщения — мягкие пузыри, как в современных мессенджерах */
+        .message {
+            background: #f1f5f9;
+            border-radius: 22px;
+            padding: 0.65rem 1rem;
+            max-width: 88%;
+            width: fit-content;
+            word-break: break-word;
+            transition: background 0.1s ease;
+            box-shadow: 0 1px 1px rgba(0, 0, 0, 0.02);
+        }
+
+        /* Контент сообщения: текст + время в одной строке с гибкостью */
+        .message-content {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 0.5rem;
+        }
+
+        .message-text {
+            font-size: 0.95rem;
+            font-weight: 450;
+            line-height: 1.4;
+            color: #0f172a;
+            letter-spacing: -0.2px;
+        }
+
+        .message-time {
+            font-size: 0.68rem;
+            font-weight: 400;
+            color: #6c7a91;
+            white-space: nowrap;
+            flex-shrink: 0;
+            margin-left: 0.5rem;
+        }
+
+        /* Группа ввода — гибкий ряд, чистая композиция */
+        .input-group {
+            display: flex;
+            gap: 0.85rem;
+            align-items: center;
+            margin-top: 0.25rem;
+        }
+
+        /* Поле ввода сообщения — наследует базовый стиль input, но без нижнего отступа */
+        .input-group input {
+            flex: 1;
+            margin-bottom: 0;
+            background-color: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 40px;
+            padding: 0.75rem 1.1rem;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+        }
+
+        .input-group input:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+            outline: none;
+        }
+
+        /* Кнопка отправки — акцент, но без лишней нагрузки, адаптирована под строку */
+        .input-group button {
+            width: auto;
+            margin-top: 0;
+            padding: 0.7rem 1.7rem;
+            background: #2563eb;
+            border-radius: 40px;
+            font-weight: 500;
+            font-size: 0.9rem;
+            letter-spacing: 0.2px;
+            box-shadow: none;
+            white-space: nowrap;
+            transition: background 0.2s, transform 0.05s;
+        }
+
+        .input-group button:hover {
+            background: #1d4ed8;
+        }
+
+        .input-group button:active {
+            transform: scale(0.97);
+        }
+
+        /* Приветственное системное сообщение может выглядеть чуть светлее (доп. класс, для вариативности) */
+        .message-system {
+            background: #eef2ff;
+            border-radius: 22px;
+            text-align: center;
+            font-style: normal;
+            font-size: 0.85rem;
+            color: #1e40af;
+            max-width: 92%;
+            align-self: center;
+        }
+
+        /* Адаптивность: на небольших экранах сообщения могут занимать больше пространства */
+        @media (max-width: 520px) {
+            .register-card {
+                padding: 1.4rem;
+            }
+            .message {
+                max-width: 94%;
+            }
+            .input-group button {
+                padding: 0.7rem 1.2rem;
+            }
+            .chat-messages {
+                max-height: 380px;
+            }
+            h1 {
+                font-size: 1.5rem;
+                margin-bottom: 1.2rem;
+            }
+        }
+
+        /* Скрываем ненужные элементы из исходного css, чтобы не мешали */
+        hr, .status-message {
+            display: none;
+        }
+
+        /* переопределяем, если какие-то поля лишние — не вмешиваются в структуру */
+        .field-group {
+            margin-bottom: 0;
+        }
+        
+        /* небольшая анимация для новых сообщений */
+        @keyframes fadeSlideUp {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .message {
+            animation: fadeSlideUp 0.2s ease-out;
+        }
+    </style>
+</head>
+<body>
+<div class="register-card">
+    <h1>💬  Чистый диалог</h1>
+
+    <!-- Контейнер сообщений (динамический список) -->
+    <div class="chat-messages" id="chatMessages">
+        <!-- Сообщения будут добавлены через JS, но пока пусто — добавим приветственные системные сообщения при загрузке -->
+    </div>
+
+    <!-- Панель ввода -->
+    <div class="input-group">
+        <input type="text" id="messageInput" placeholder="Напишите сообщение..." autocomplete="off" aria-label="Текст сообщения">
+        <button id="sendButton">Отправить</button>
+    </div>
+</div>
+
+<script>
+    (function() {
+        // --- DOM элементы ---
+        const messagesContainer = document.getElementById('chatMessages');
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+
+        // --- Вспомогательная функция создания сообщения (текст + время, пользовательское или системное) ---
+        // isSystem: если true — добавляет особый стиль (более нейтральный / центрированный)
+        function addMessageToChat(messageText, options = {}) {
+            // 1. Защита от пустых или только пробельных сообщений
+            if (!messageText || typeof messageText !== 'string') return;
+            const trimmedText = messageText.trim();
+            if (trimmedText === "") return;
+
+            const isSystem = options.isSystem || false;
+            const customTime = options.timeStamp || null;
+
+            // 2. Создаем элемент сообщения
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message');
+            if (isSystem) {
+                messageDiv.classList.add('message-system');
+            }
+
+            // 3. Внутренний контейнер для текста и времени
+            const contentWrapper = document.createElement('div');
+            contentWrapper.classList.add('message-content');
+
+            const textSpan = document.createElement('span');
+            textSpan.classList.add('message-text');
+            textSpan.textContent = trimmedText;   // защита от XSS через textContent
+
+            const timeSpan = document.createElement('span');
+            timeSpan.classList.add('message-time');
+            
+            // Формируем временную метку: если передана кастомная — используем, иначе текущее время (локальное)
+            let timeString = '';
+            if (customTime && typeof customTime === 'string') {
+                timeString = customTime;
+            } else {
+                const now = new Date();
+                // Формат HH:MM (без секунд, эстетичнее)
+                timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            }
+            timeSpan.textContent = timeString;
+
+            contentWrapper.appendChild(textSpan);
+            contentWrapper.appendChild(timeSpan);
+            messageDiv.appendChild(contentWrapper);
+
+            // 4. Добавляем в контейнер и прокручиваем к новому сообщению
+            messagesContainer.appendChild(messageDiv);
+            // автоскролл вниз (плавно, но без рывков)
+            messagesContainer.scrollTo({
+                top: messagesContainer.scrollHeight,
+                behavior: 'smooth'
+            });
+        }
+
+        // --- Инициализация чата: добавляем 2 приветственных сообщения (одно системное, одно приветственное пользователю) ---
+        function initChatWithWelcomeMessages() {
+            // Получаем текущее время для единообразия
+            const now = new Date();
+            const initTime = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            
+            // Системное сообщение: добро пожаловать
+            addMessageToChat('✨ Добро пожаловать в чат! Здесь можно вести диалог в минималистичном стиле.', { isSystem: true, timeStamp: initTime });
+            
+            // Небольшая пауза для натуральности (но асинхронность не нужна, просто добавляем чуть позже через таймаут, чтобы создать ощущение живого чата)
+            setTimeout(() => {
+                const nowSecond = new Date();
+                const laterTime = nowSecond.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                addMessageToChat('Напишите что-нибудь, и сообщение появится здесь. Просто и без лишнего.', { isSystem: false, timeStamp: laterTime });
+                // Прокрутка еще раз (для надежности)
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }, 100);
+        }
+
+        // --- Добавление пользовательского сообщения (вызывается из UI) ---
+        function sendUserMessage() {
+            const rawText = messageInput.value;
+            if (!rawText || rawText.trim() === "") {
+                // Легкий визуальный сигнал, что поле пустое: не отправляем, но можно слегка подсветить инпут
+                messageInput.style.borderColor = "#f97316";
+                setTimeout(() => {
+                    messageInput.style.borderColor = "#e2e8f0";
+                }, 500);
+                return;
+            }
+            const messageText = rawText.trim();
+            // Создаем сообщение от пользователя (без флага system, стандартный стиль)
+            const now = new Date();
+            const userTime = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            addMessageToChat(messageText, { isSystem: false, timeStamp: userTime });
+            
+            // Очищаем поле ввода и возвращаем фокус
+            messageInput.value = "";
+            messageInput.focus();
+        }
+
+        // --- Обработка нажатия Enter в поле ввода ---
+        function onInputKeyPress(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendUserMessage();
+            }
+        }
+
+        // --- Добавляем стиль при загрузке и инициализируем обработчики ---
+        function setupEventListeners() {
+            sendButton.addEventListener('click', sendUserMessage);
+            messageInput.addEventListener('keypress', onInputKeyPress);
+            // Небольшой фикс для восстановления стиля при фокусе
+            messageInput.addEventListener('focus', () => {
+                messageInput.style.borderColor = "#e2e8f0";
+            });
+        }
+
+        // --- Дополнительная опция: если пользователь кликает на контейнер сообщений, фокус не теряется удобно ---
+        messagesContainer.addEventListener('click', () => {
+            // не перехватываем сильно, но инпут остаётся в фокусе для быстрой отправки
+            messageInput.focus();
+        });
+
+        // --- Старт приложения ---
+        setupEventListeners();
+        initChatWithWelcomeMessages();
+    })();
+</script>
+</body>
+</html>
