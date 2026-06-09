@@ -35,6 +35,16 @@ def user_registration():
     cursor.close
     return jsonify({"user_id": new_user_id, "code": 200})
 
+@app.route("/user_avtorization", methods=["POST"])
+def user_avtorization():
+    data = request.json
+    cursor = g.conn.cursor()
+    cursor.execute("SELECT * from users WHERE LOGIN=%s, data["login"],data["password"]))
+    g.conn.commit()
+    new_user_id = cursor.lastrowid
+    cursor.close
+    return jsonify({"user_id": new_user_id, "code": 200})
+
 @app.route("/chat")
 def chat():
     name = request.args.get("nickname")
