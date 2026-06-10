@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -18,7 +19,6 @@
             overflow: hidden;
         }
 
-        /* Левая панель: список пользователей */
         .users-panel {
             width: 280px;
             background: #f9fafb;
@@ -83,7 +83,6 @@
             color: #111827;
         }
 
-        /* Правая панель: чат */
         .chat-panel {
             flex: 1;
             display: flex;
@@ -98,6 +97,9 @@
             font-weight: 600;
             font-size: 1.1rem;
             color: #1f2937;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         .messages-area {
@@ -176,125 +178,222 @@
             color: #9ca3af;
             font-size: 0.95rem;
         }
+
+        .logout-btn {
+            background: #ef4444;
+            color: white;
+            padding: 0.4rem 1rem;
+            border-radius: 40px;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
     </style>
 </head>
+
 <body>
-    <!-- Передаём данные через data-атрибуты -->
-    <div id="chat-data" 
-         data-owner-id="{{ owner.id }}" 
-         data-deliver-id="{{ deliver.id if deliver else '' }}">
-    </div>
+    <!-- Передаём данные текущего пользователя -->
+    <div id="chat-data" data-owner-id="{{ owner.id }}"></div>
 
     <div class="chat-container">
         <!-- Левая панель: пользователи -->
         <div class="users-panel">
-             <div class="users-header">Пользователи</div>
-    <div class="users-list">
-        {% for user in all_users %}
-            {% if user.id != owner.id %}
-                <div class="user-item {% if deliver and deliver.id == user.id %}active{% endif %}"
-                     data-user-id="{{ user.id }}"
-                     onclick="window.location.href='{{ url_for('profile') }}?id={{ user.id }}'">
+            <div class="users-header">Пользователи</div>
+            <div class="users-list">
+                {% for user in all_users %}
+                {% if user.id != owner.id %}
+                <div class="user-item" data-user-id="{{ user.id }}" data-name="{{ user.name }}"
+                    data-surname="{{ user.surname }}">
                     <div class="user-avatar">{{ user.name[0] }}{{ user.surname[0] }}</div>
                     <div class="user-info">
                         <div class="user-name">{{ user.name }} {{ user.surname }}</div>
                         <div style="font-size: 0.75rem; color: #6b7280;">{{ user.login }}</div>
                     </div>
                 </div>
-            {% endif %}
-        {% endfor %}
-    </div>
-    <!-- Кнопка выхода -->
-    <div style="padding: 1rem; border-top: 1px solid #e5e7eb;">
-        <a href="{{ url_for('logout') }}" style="display: block; text-align: center; background: #ef4444; color: white; padding: 0.6rem; border-radius: 40px; text-decoration: none;">Выйти</a>
-    </div>
-</div>
+                {% endif %}
+                {% endfor %}
+            </div>
+            <div style="padding: 1rem; border-top: 1px solid #e5e7eb;">
+                <a href="{{ url_for('logout') }}" class="logout-btn"
+                    style="display: block; text-align: center;">Выйти</a>
+            </div>
+        </div>
 
         <!-- Правая панель: диалог -->
         <div class="chat-panel">
-            {% if deliver %}
-                <div class="chat-header">
-                    Чат с {{ deliver.name }} {{ deliver.surname }}
-                </div>
-                <div class="messages-area" id="messages-area">
-                    {% if messages %}
-                        {% for msg in messages %}
-                            {% set is_owner = (msg.ownerId == owner.id) %}
-                            <div class="message {% if is_owner %}message-owner{% else %}message-deliver{% endif %}">
-                                {{ msg.text }}
-                                {% if msg.date %}
-                                    <div class="message-info">{{ msg.date.strftime('%H:%M %d.%m.%Y') if msg.date is not string else msg.date }}</div>
-                                {% endif %}
-                            </div>
-                        {% endfor %}
-                    {% else %}
-                        <div class="empty-chat">Нет сообщений. Напишите что-нибудь!</div>
-                    {% endif %}
-                </div>
-                <div class="input-area">
-                    <input type="text" id="mes_input" placeholder="Введите сообщение..." autocomplete="off">
-                    <button id="send_mes">Отправить</button>
-                </div>
-            {% else %}
-                <div class="empty-chat" style="flex:1;">
-                    Выберите пользователя из списка слева, чтобы начать чат
-                </div>
-            {% endif %}
+            <div class="chat-header">
+                <span id="chat-header-title">Чат</span>
+                <a href="{{ url_for('logout') }}" class="logout-btn">Выйти</a>
+            </div>
+            <div class="messages-area" id="messages-area">
+                <div class="empty-chat">Выберите пользователя, чтобы начать чат</div>
+            </div>
+            <div class="input-area">
+                <input type="text" id="mes_input" placeholder="Введите сообщение..." autocomplete="off">
+                <button id="send_mes">Отправить</button>
+            </div>
         </div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <script>
-        $(document).ready(function(){
-            // Получаем данные из data-атрибутов
-            var chatData = $('#chat-data');
-            var ownerId = parseInt(chatData.data('owner-id'));
-            var deliverId = chatData.data('deliver-id');
-            deliverId = deliverId ? parseInt(deliverId) : null;
+        $(document).ready(function () {
+            var ownerId = parseInt($('#chat-data').data('owner-id'));
+            var currentDeliverId = null;
+            var pollingInterval = null;
 
-            // Отправка сообщения
-            $("#send_mes").on("click", function(){
-                var messageText = $("#mes_input").val().trim();
-                if (!messageText) return;
+            function formatDateTime(dateStr) {
+                if (!dateStr) return '';
+                var date = new Date(dateStr);
+                if (isNaN(date.getTime())) return dateStr;
 
-                if (!deliverId) {
-                    alert("Собеседник не выбран");
+                var day = date.getDate().toString().padStart(2, '0');
+                var month = (date.getMonth() + 1).toString().padStart(2, '0');
+                var hours = date.getHours().toString().padStart(2, '0');
+                var minutes = date.getMinutes().toString().padStart(2, '0');
+
+                return day + '.' + month + ' ' + hours + ':' + minutes;
+            }
+
+            // Рендер сообщений с сохранением прокрутки
+            var lastScrollPosition = 0;
+            var wasAtBottom = false;
+
+            function renderMessages(messages, preserveScroll) {
+                var $msgArea = $('#messages-area');
+                // Запоминаем текущую прокрутку и флаг "внизу"
+                if (preserveScroll) {
+                    lastScrollPosition = $msgArea.scrollTop();
+                    var maxScroll = $msgArea[0].scrollHeight - $msgArea.height();
+                    wasAtBottom = (lastScrollPosition >= maxScroll - 10); // допуск 10px
+                }
+
+                $msgArea.empty();
+                if (!messages || messages.length === 0) {
+                    $msgArea.html('<div class="empty-chat">Нет сообщений. Напишите что-нибудь!</div>');
+                    if (preserveScroll && !wasAtBottom) $msgArea.scrollTop(lastScrollPosition);
                     return;
                 }
 
+                for (var i = 0; i < messages.length; i++) {
+                    var msg = messages[i];
+                    var isOwner = (msg.ownerId == ownerId);
+                    var $msgDiv = $('<div class="message ' + (isOwner ? 'message-owner' : 'message-deliver') + '">')
+                        .text(msg.text);
+                    if (msg.date) {
+                        var dateFormatted = formatDateTime(msg.date);
+                        $msgDiv.append('<div class="message-info">' + dateFormatted + '</div>');
+                    }
+                    $msgArea.append($msgDiv);
+                }
+
+                // Восстанавливаем прокрутку
+                if (preserveScroll) {
+                    if (wasAtBottom) {
+                        // Если пользователь был внизу – прокручиваем вниз после рендера
+                        $msgArea.scrollTop($msgArea[0].scrollHeight);
+                    } else {
+                        $msgArea.scrollTop(lastScrollPosition);
+                    }
+                } else {
+                    // Первая загрузка – прокручиваем вниз
+                    $msgArea.scrollTop($msgArea[0].scrollHeight);
+                }
+            }
+
+            function loadMessages(deliverId, preserveScroll) {
+                if (!deliverId) return;
+                currentDeliverId = deliverId;
+                $.get('/api/messages', { user1: ownerId, user2: deliverId })
+                    .done(function (messages) {
+                        renderMessages(messages, preserveScroll);
+                    })
+                    .fail(function () {
+                        alert('Ошибка загрузки сообщений');
+                    });
+            }
+
+            // Автообновление (polling) с сохранением прокрутки
+            function startPolling() {
+                if (pollingInterval) clearInterval(pollingInterval);
+                pollingInterval = setInterval(function () {
+                    if (currentDeliverId) {
+                        loadMessages(currentDeliverId, true);  // true – сохранять прокрутку
+                    }
+                }, 4000);
+            }
+
+            // Обработка клика по пользователю
+            $(document).on('click', '.user-item', function () {
+                var userId = $(this).data('user-id');
+                var userName = $(this).data('name');
+                var userSurname = $(this).data('surname');
+                $('#chat-header-title').text('Чат с ' + userName + ' ' + userSurname);
+                // При клике прокрутку вниз не сохраняем (всегда вниз)
+                loadMessages(userId, false);
+                $('.user-item').removeClass('active');
+                $(this).addClass('active');
+                startPolling();
+            });
+
+            // Отправка сообщения (после отправки – перезагружаем сообщения, прокрутка вниз)
+            $('#send_mes').on('click', function () {
+                var $btn = $(this);
+                var text = $('#mes_input').val();
+                if (!text.trim()) {
+                    alert('Введите сообщение');
+                    return;
+                }
+                if (text.length > 2000) {
+                    alert('Сообщение не должно превышать 2000 символов');
+                    return;
+                }
+                if (!currentDeliverId) {
+                    alert('Сначала выберите собеседника');
+                    return;
+                }
+                $btn.prop('disabled', true).text('Отправка...');
                 $.ajax({
-                    url: "/send_mes",
-                    type: "POST",
-                    contentType: "application/json",
+                    url: '/api/messages',
+                    type: 'POST',
+                    contentType: 'application/json',
                     data: JSON.stringify({
                         owner: ownerId,
-                        deliver: deliverId,
-                        text: messageText
+                        deliver: currentDeliverId,
+                        text: text.trim()
                     })
-                }).done(function(data){
-                    if (data.result){
-                        window.location.reload();
-                    } else {
-                        alert("Ошибка при отправке сообщения");
-                    }
-                }).fail(function(){
-                    alert("Ошибка соединения");
+                }).done(function () {
+                    $('#mes_input').val('');
+                    loadMessages(currentDeliverId, false); // после отправки – вниз
+                }).fail(function (xhr) {
+                    var err = xhr.responseJSON ? xhr.responseJSON.error : 'Ошибка отправки';
+                    alert(err);
+                }).always(function () {
+                    $btn.prop('disabled', false).text('Отправить');
                 });
             });
 
-            // Автопрокрутка вниз чата
-            var msgArea = document.getElementById("messages-area");
-            if (msgArea) {
-                msgArea.scrollTop = msgArea.scrollHeight;
-            }
-
             // Отправка по Enter
-            $("#mes_input").on("keypress", function(e){
+            $('#mes_input').on('keypress', function (e) {
                 if (e.which === 13) {
-                    $("#send_mes").click();
+                    $('#send_mes').click();
                 }
             });
+
+            // При загрузке страницы – если есть активный пользователь (например, из старого URL)
+            var activeUser = $('.user-item.active').first();
+            if (activeUser.length) {
+                var userId = activeUser.data('user-id');
+                var userName = activeUser.data('name');
+                var userSurname = activeUser.data('surname');
+                $('#chat-header-title').text('Чат с ' + userName + ' ' + userSurname);
+                loadMessages(userId, false);
+                startPolling();
+            } else {
+                // Если активного нет – просто показываем пустую область
+                $('#messages-area').html('<div class="empty-chat">Выберите пользователя, чтобы начать чат</div>');
+            }
         });
     </script>
 </body>
+
 </html>
