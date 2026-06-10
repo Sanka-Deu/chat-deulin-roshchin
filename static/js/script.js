@@ -1,18 +1,26 @@
 $(document).ready(function(){
     $("#registerForm").on("submit",function(e){
-        e.preventDefault();
-        $.ajax({
-            url: "/user_registration",
-            type: "POST",
-            contentType: "application/json",
-            data: JSON.stringify({
-                name: $("#firstName").val(),
-                surname: $("#lastName").val(),
-                login: $("#login").val(),
-                password: $("#password").val(),
-            })
+    e.preventDefault();
+    $.ajax({
+        url: "/user_registration",
+        type: "POST",
+        contentType: "application/json",
+        data: JSON.stringify({
+            name: $("#firstName").val(),
+            surname: $("#lastName").val(),
+            login: $("#login").val(),
+            password: $("#password").val(),
         })
-    })
+    }).done(function(data){
+        if (data.result){
+            window.location.href = "/chat";
+        } else {
+            alert(data.message || "Ошибка регистрации");
+        }
+    }).fail(function(){
+        alert("Ошибка соединения");
+    });
+})
     $("#avtorizationForm").on("submit",function(e){
         e.preventDefault();
         $.ajax({
